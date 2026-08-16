@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Cooldown</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">PERSONAL LIMITS</div>
+        <h1>Cooldown</h1>
+      </div>
+      <div class="top-actions">
+        <button id="themeBtn" class="icon-btn" aria-label="Toggle theme" title="Toggle theme">☼</button>
+        <button id="adminBtn" class="icon-btn" aria-label="Administration" title="Administration">⚙</button>
+      </div>
+    </header>
+
+    <section class="summary-card" aria-label="Summary">
+      <div>
+        <div class="summary-label">Ready now</div>
+        <div class="summary-value"><span id="readyCount">0</span><span class="summary-small"> / <span id="totalCount">0</span></span></div>
+      </div>
+      <div class="summary-divider"></div>
+      <div>
+        <div class="summary-label">Next unlock</div>
+        <div id="nextUnlock" class="summary-next">—</div>
+      </div>
+    </section>
+
+    <main>
+      <div id="emptyState" class="empty-state hidden">
+        <div class="empty-icon">＋</div>
+        <h2>Add your first limit</h2>
+        <p>Create a tile such as Pizza — once every 14 days.</p>
+        <button id="emptyAddBtn" class="primary-btn">Add limit</button>
+      </div>
+      <section id="tiles" class="tiles" aria-live="polite"></section>
+    </main>
+
+    <button id="fab" class="fab" aria-label="Add limit" title="Add limit">＋</button>
+  </div>
+
+  <dialog id="limitDialog" class="dialog">
+    <form id="limitForm" method="dialog" class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow">ADMINISTRATION</div>
+          <h2 id="dialogTitle">Add limit</h2>
+        </div>
+        <button type="button" class="icon-btn ghost" data-close="limitDialog" aria-label="Close">✕</button>
+      </div>
+
+      <input id="editId" type="hidden" />
+      <label>
+        <span>Name</span>
+        <input id="nameInput" maxlength="40" placeholder="Pizza" required />
+      </label>
+      <div class="form-row">
+        <label class="emoji-field">
+          <span>Icon</span>
+          <input id="emojiInput" maxlength="4" value="🍕" inputmode="text" />
+        </label>
+        <label>
+          <span>Cooldown</span>
+          <div class="duration-input">
+            <input id="cooldownInput" type="number" min="1" max="9999" value="14" required />
+            <select id="unitInput" aria-label="Cooldown unit">
+              <option value="days">days</option>
+              <option value="hours">hours</option>
+              <option value="weeks">weeks</option>
+            </select>
+          </div>
+        </label>
+      </div>
+      <label>
+        <span>Optional note</span>
+        <input id="noteInput" maxlength="80" placeholder="Only at my favorite place" />
+      </label>
+
+      <div class="dialog-actions split-actions">
+        <button id="deleteBtn" type="button" class="danger-btn hidden">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="secondary-btn" data-close="limitDialog">Cancel</button>
+        <button type="submit" class="primary-btn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="useDialog" class="dialog">
+    <div class="dialog-card compact-card">
+      <div id="useIcon" class="hero-emoji">🍕</div>
+      <h2 id="useTitle">Pizza</h2>
+      <p id="useText" class="muted centered">Start the 14-day cooldown now?</p>
+      <div class="dialog-actions full-actions">
+        <button type="button" class="secondary-btn" data-close="useDialog">Cancel</button>
+        <button id="confirmUseBtn" type="button" class="primary-btn">Use now</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="detailDialog" class="dialog">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow">DETAIL</div>
+          <h2 id="detailTitle">Pizza</h2>
+        </div>
+        <button type="button" class="icon-btn ghost" data-close="detailDialog" aria-label="Close">✕</button>
+      </div>
+      <div id="detailStatus" class="detail-status"></div>
+      <div class="detail-grid">
+        <div><span>Cooldown</span><strong id="detailCooldown">—</strong></div>
+        <div><span>Last used</span><strong id="detailLast">—</strong></div>
+        <div><span>Next allowed</span><strong id="detailNext">—</strong></div>
+        <div><span>Total uses</span><strong id="detailUses">0</strong></div>
+      </div>
+      <div id="detailNoteWrap" class="note-box hidden"><strong>Note</strong><div id="detailNote"></div></div>
+      <div class="history-head"><h3>History</h3><button id="undoBtn" class="text-btn hidden">Undo last</button></div>
+      <div id="historyList" class="history-list"></div>
+      <div class="dialog-actions">
+        <button id="editFromDetailBtn" class="secondary-btn">Edit</button>
+        <span class="spacer"></span>
+        <button type="button" class="primary-btn" data-close="detailDialog">Done</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="adminDialog" class="dialog">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow">SETTINGS</div>
+          <h2>Administration</h2>
+        </div>
+        <button type="button" class="icon-btn ghost" data-close="adminDialog" aria-label="Close">✕</button>
+      </div>
+      <button id="adminAddBtn" class="menu-row"><span class="menu-icon">＋</span><span><strong>Add a limit</strong><small>Create another cooldown tile</small></span><span>›</span></button>
+      <button id="exportBtn" class="menu-row"><span class="menu-icon">⇩</span><span><strong>Export backup</strong><small>Download all limits and history as JSON</small></span><span>›</span></button>
+      <button id="importBtn" class="menu-row"><span class="menu-icon">⇧</span><span><strong>Import backup</strong><small>Restore a previously exported JSON file</small></span><span>›</span></button>
+      <input id="importFile" type="file" accept="application/json,.json" hidden />
+      <button id="resetBtn" class="menu-row danger-row"><span class="menu-icon">↺</span><span><strong>Reset app</strong><small>Delete all local data</small></span><span>›</span></button>
+      <p class="storage-note">Your data stays on this device in browser storage unless you export it.</p>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>
