@@ -4,6 +4,8 @@ Cooldown Limits is a simple personal habit app built around one idea:
 
 **After you do something, start a cooldown and clearly see when it is available again.**
 
+👉 **[Open the app](https://bubakzlesa.github.io/cooldown-limits/)**
+
 It can be used both for reducing bad habits and for keeping good habits on schedule.
 
 ## Why I made it
