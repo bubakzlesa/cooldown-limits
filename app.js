@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = 'cooldown-limits-v1';
   const THEME_KEY = 'cooldown-theme-v1';
+  const COLLAPSED_KEY = 'cooldown-collapsed-sections-v1';
   const DATA_VERSION = 2;
   // Keep STORAGE_KEY stable. Add future schema changes as sequential migrations in migrateData().
 
@@ -17,7 +18,7 @@
 
   const $ = (id) => document.getElementById(id);
   const els = {
-    tiles: $('tiles'), empty: $('emptyState'), readyCount: $('readyCount'), totalCount: $('totalCount'), nextUnlock: $('nextUnlock'),
+    sections: $('sections'), empty: $('emptyState'), filterEmpty: $('filterEmptyState'), filterBar: $('filterBar'), routineDueCount: $('routineDueCount'), limitAvailableCount: $('limitAvailableCount'),
     fab: $('fab'), adminBtn: $('adminBtn'), themeBtn: $('themeBtn'), emptyAddBtn: $('emptyAddBtn'),
     limitDialog: $('limitDialog'), limitForm: $('limitForm'), dialogTitle: $('dialogTitle'), editId: $('editId'), nameInput: $('nameInput'), emojiInput: $('emojiInput'), cooldownInput: $('cooldownInput'), unitInput: $('unitInput'), noteInput: $('noteInput'), intervalLabel: $('intervalLabel'), noteLabel: $('noteLabel'), deleteBtn: $('deleteBtn'),
     useDialog: $('useDialog'), useIcon: $('useIcon'), useTitle: $('useTitle'), useText: $('useText'), confirmUseBtn: $('confirmUseBtn'),
@@ -29,6 +30,28 @@
   let pendingUseId = null;
   let detailId = null;
   let toastTimer = null;
+  let activeFilter = 'all';
+  const collapsedSections = loadCollapsedSections();
+
+  const sectionDefinitions = [
+    { id: 'routine-due', title: 'Due routines', type: 'routine' },
+    { id: 'routine-track', title: 'Routines on track', type: 'routine' },
+    { id: 'limit-available', title: 'Available limits', type: 'limit' },
+    { id: 'limit-cooling', title: 'Cooling limits', type: 'limit' }
+  ];
+
+  function loadCollapsedSections() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(COLLAPSED_KEY) || '[]');
+      return new Set(Array.isArray(stored) ? stored : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  function saveCollapsedSections() {
+    localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsedSections]));
+  }
 
   function loadData() {
     try {
@@ -150,59 +173,105 @@
 
   function render() {
     const now = Date.now();
-    els.tiles.innerHTML = '';
-    els.totalCount.textContent = data.limits.length;
-    const actionable = data.limits.filter(limit => isReady(limit, now));
-    els.readyCount.textContent = actionable.length;
+    const grouped = Object.fromEntries(sectionDefinitions.map(section => [section.id, []]));
+    data.limits.forEach(limit => grouped[groupFor(limit, now)].push(limit));
+
+    els.sections.innerHTML = '';
+    els.routineDueCount.textContent = grouped['routine-due'].length;
+    els.limitAvailableCount.textContent = grouped['limit-available'].length;
     els.empty.classList.toggle('hidden', data.limits.length !== 0);
-    els.tiles.classList.toggle('hidden', data.limits.length === 0);
+    els.filterBar.classList.toggle('hidden', data.limits.length === 0);
+    els.sections.classList.toggle('hidden', data.limits.length === 0);
+    updateFilterButtons();
 
-    const upcoming = data.limits.map(l => ({ l, ts: nextAllowed(l) })).filter(x => x.ts && x.ts > now).sort((a,b) => a.ts - b.ts);
-    if (upcoming.length) {
-      const next = upcoming[0];
-      const eventName = next.l.type === 'routine' ? 'due' : 'available';
-      els.nextUnlock.textContent = `${next.l.emoji} ${next.l.name} ${eventName} · ${formatCompactDate(next.ts)}`;
-    } else {
-      els.nextUnlock.textContent = 'No upcoming changes';
-    }
-
-    data.limits.forEach(limit => {
-      const readyNow = isReady(limit, now);
-      const presentation = tilePresentation(limit, now);
-      const tile = document.createElement('div');
-      tile.setAttribute('role', 'button');
-      tile.tabIndex = 0;
-      tile.className = `tile ${presentation.className}`;
-      tile.dataset.id = limit.id;
-      tile.innerHTML = `
-        <div class="tile-top">
-          <div class="tile-identity"><div class="tile-emoji">${escapeHtml(limit.emoji)}</div><span class="tile-kind">${limit.type === 'routine' ? 'ROUTINE' : 'LIMIT'}</span></div>
-          <button type="button" class="tile-menu" aria-label="Details">•••</button>
-        </div>
-        <div class="tile-name">${escapeHtml(limit.name)}</div>
-        <div class="tile-note">${escapeHtml(limit.note || plural(limit.value, limit.unit))}</div>
-        <div class="tile-bottom">
-          <span class="status-pill">${presentation.status}</span>
-          <span class="tile-sub">${presentation.sub}</span>
-        </div>`;
-
-      const activateTile = (e) => {
-        if (e.target.closest('.tile-menu')) return;
-        limit.type === 'routine' || readyNow ? openUse(limit.id) : openDetail(limit.id);
-      };
-      tile.addEventListener('click', activateTile);
-      tile.addEventListener('keydown', (e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.tile-menu')) {
-          e.preventDefault();
-          activateTile(e);
-        }
-      });
-      tile.querySelector('.tile-menu').addEventListener('click', (e) => {
-        e.stopPropagation();
-        openDetail(limit.id);
-      });
-      els.tiles.appendChild(tile);
+    let visibleSectionCount = 0;
+    sectionDefinitions.forEach(definition => {
+      const limits = grouped[definition.id];
+      if (!limits.length || (activeFilter !== 'all' && activeFilter !== definition.type)) return;
+      visibleSectionCount += 1;
+      els.sections.appendChild(createSection(definition, limits, now));
     });
+
+    els.filterEmpty.classList.toggle('hidden', data.limits.length === 0 || visibleSectionCount !== 0);
+  }
+
+  function groupFor(limit, now) {
+    if (limit.type === 'routine') return isReady(limit, now) ? 'routine-due' : 'routine-track';
+    return isReady(limit, now) ? 'limit-available' : 'limit-cooling';
+  }
+
+  function updateFilterButtons() {
+    document.querySelectorAll('[data-filter]').forEach(button => {
+      const active = button.dataset.filter === activeFilter;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  function createSection(definition, limits, now) {
+    const collapsed = collapsedSections.has(definition.id);
+    const section = document.createElement('section');
+    section.className = `habit-group group-${definition.id}`;
+    section.dataset.group = definition.id;
+
+    const header = document.createElement('button');
+    header.type = 'button';
+    header.className = 'group-header';
+    header.setAttribute('aria-expanded', String(!collapsed));
+    header.setAttribute('aria-controls', `group-${definition.id}-tiles`);
+    header.innerHTML = `<span class="group-title">${definition.title}<span class="group-count">${limits.length}</span></span><span class="group-chevron" aria-hidden="true">⌄</span>`;
+    header.addEventListener('click', () => {
+      collapsed ? collapsedSections.delete(definition.id) : collapsedSections.add(definition.id);
+      saveCollapsedSections();
+      render();
+    });
+    section.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.id = `group-${definition.id}-tiles`;
+    grid.className = 'tiles';
+    grid.classList.toggle('hidden', collapsed);
+    limits.forEach(limit => grid.appendChild(createTile(limit, now)));
+    section.appendChild(grid);
+    return section;
+  }
+
+  function createTile(limit, now) {
+    const readyNow = isReady(limit, now);
+    const presentation = tilePresentation(limit, now);
+    const tile = document.createElement('div');
+    tile.setAttribute('role', 'button');
+    tile.tabIndex = 0;
+    tile.className = `tile ${presentation.className}`;
+    tile.dataset.id = limit.id;
+    tile.innerHTML = `
+      <div class="tile-top">
+        <div class="tile-identity"><div class="tile-emoji">${escapeHtml(limit.emoji)}</div><span class="tile-kind">${limit.type === 'routine' ? 'ROUTINE' : 'LIMIT'}</span></div>
+        <button type="button" class="tile-menu" aria-label="Details">•••</button>
+      </div>
+      <div class="tile-name">${escapeHtml(limit.name)}</div>
+      <div class="tile-note">${escapeHtml(limit.note || plural(limit.value, limit.unit))}</div>
+      <div class="tile-bottom">
+        <span class="status-pill">${presentation.status}</span>
+        <span class="tile-sub">${presentation.sub}</span>
+      </div>`;
+
+    const activateTile = (e) => {
+      if (e.target.closest('.tile-menu')) return;
+      limit.type === 'routine' || readyNow ? openUse(limit.id) : openDetail(limit.id);
+    };
+    tile.addEventListener('click', activateTile);
+    tile.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.tile-menu')) {
+        e.preventDefault();
+        activateTile(e);
+      }
+    });
+    tile.querySelector('.tile-menu').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openDetail(limit.id);
+    });
+    return tile;
   }
 
   function escapeHtml(value) {
@@ -441,6 +510,12 @@
     openUse(id);
   });
   document.querySelectorAll('input[name="limitType"]').forEach(input => input.addEventListener('change', updateFormType));
+  els.filterBar.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-filter]');
+    if (!button) return;
+    activeFilter = button.dataset.filter;
+    render();
+  });
   els.fab.addEventListener('click', openAdd);
   els.emptyAddBtn.addEventListener('click', openAdd);
   els.adminAddBtn.addEventListener('click', openAdd);
@@ -452,6 +527,9 @@
   els.resetBtn.addEventListener('click', () => {
     if (!confirm('Delete all tiles and history from this device?')) return;
     data = { version: DATA_VERSION, limits: [] };
+    collapsedSections.clear();
+    localStorage.removeItem(COLLAPSED_KEY);
+    activeFilter = 'all';
     saveData(); render(); els.adminDialog.close(); showToast('App reset.');
   });
 

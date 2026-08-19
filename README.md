@@ -20,6 +20,8 @@ Examples:
 
 Tap a tile to record an available limit or log a routine. Use the menu on a tile to see its history, undo the latest entry, or edit its settings.
 
+The dashboard groups routines and limits by status. Use the filters to focus on one type, and tap a section heading to collapse or expand it.
+
 ## Install on Android
 
 Open the app in Chrome on Android and choose **Install app**. It will appear on the home screen and app launcher like a regular app.

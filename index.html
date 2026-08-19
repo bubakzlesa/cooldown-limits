@@ -15,7 +15,7 @@
   <div class="app-shell">
     <header class="topbar">
       <div>
-        <div class="eyebrow">PERSONAL LIMITS</div>
+        <div class="eyebrow">HABITS &amp; LIMITS</div>
         <h1>Cooldown</h1>
       </div>
       <div class="top-actions">
@@ -26,15 +26,21 @@
 
     <section class="summary-card" aria-label="Summary">
       <div>
-        <div class="summary-label">Due / available</div>
-        <div class="summary-value"><span id="readyCount">0</span><span class="summary-small"> / <span id="totalCount">0</span></span></div>
+        <div class="summary-label">Routines due</div>
+        <div id="routineDueCount" class="summary-value">0</div>
       </div>
       <div class="summary-divider"></div>
       <div>
-        <div class="summary-label">Next change</div>
-        <div id="nextUnlock" class="summary-next">—</div>
+        <div class="summary-label">Limits available</div>
+        <div id="limitAvailableCount" class="summary-value">0</div>
       </div>
     </section>
+
+    <nav id="filterBar" class="filter-bar" aria-label="Filter tiles">
+      <button type="button" class="filter-chip active" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" class="filter-chip" data-filter="routine" aria-pressed="false">Routines</button>
+      <button type="button" class="filter-chip" data-filter="limit" aria-pressed="false">Limits</button>
+    </nav>
 
     <main>
       <div id="emptyState" class="empty-state hidden">
@@ -43,7 +49,8 @@
         <p>Create a limit to space something out or a routine to repeat.</p>
         <button id="emptyAddBtn" class="primary-btn">Add tile</button>
       </div>
-      <section id="tiles" class="tiles" aria-live="polite"></section>
+      <div id="filterEmptyState" class="filter-empty hidden">No tiles match this filter yet.</div>
+      <div id="sections" class="habit-sections" aria-live="polite"></div>
     </main>
 
     <button id="fab" class="fab" aria-label="Add tile" title="Add tile">＋</button>

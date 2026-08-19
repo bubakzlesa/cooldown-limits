@@ -1,4 +1,4 @@
-const CACHE = 'cooldown-v3';
+const CACHE = 'cooldown-v4';
 const ASSETS = [
   './',
   './index.html',
