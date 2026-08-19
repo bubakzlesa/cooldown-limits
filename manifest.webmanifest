@@ -1,7 +1,7 @@
 {
-  "name": "Cooldown — Personal Limits",
+  "name": "Cooldown — Limits & Routines",
   "short_name": "Cooldown",
-  "description": "A tiny personal cooldown tracker for habits and purchases.",
+  "description": "Track personal limits and keep positive routines on schedule.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

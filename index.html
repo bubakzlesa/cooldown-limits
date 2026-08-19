@@ -26,12 +26,12 @@
 
     <section class="summary-card" aria-label="Summary">
       <div>
-        <div class="summary-label">Ready now</div>
+        <div class="summary-label">Due / available</div>
         <div class="summary-value"><span id="readyCount">0</span><span class="summary-small"> / <span id="totalCount">0</span></span></div>
       </div>
       <div class="summary-divider"></div>
       <div>
-        <div class="summary-label">Next unlock</div>
+        <div class="summary-label">Next change</div>
         <div id="nextUnlock" class="summary-next">—</div>
       </div>
     </section>
@@ -39,14 +39,14 @@
     <main>
       <div id="emptyState" class="empty-state hidden">
         <div class="empty-icon">＋</div>
-        <h2>Add your first limit</h2>
-        <p>Create a tile such as Pizza — once every 14 days.</p>
-        <button id="emptyAddBtn" class="primary-btn">Add limit</button>
+        <h2>Add your first tile</h2>
+        <p>Create a limit to space something out or a routine to repeat.</p>
+        <button id="emptyAddBtn" class="primary-btn">Add tile</button>
       </div>
       <section id="tiles" class="tiles" aria-live="polite"></section>
     </main>
 
-    <button id="fab" class="fab" aria-label="Add limit" title="Add limit">＋</button>
+    <button id="fab" class="fab" aria-label="Add tile" title="Add tile">＋</button>
   </div>
 
   <dialog id="limitDialog" class="dialog">
@@ -54,12 +54,23 @@
       <div class="dialog-head">
         <div>
           <div class="eyebrow">ADMINISTRATION</div>
-          <h2 id="dialogTitle">Add limit</h2>
+          <h2 id="dialogTitle">Add tile</h2>
         </div>
         <button type="button" class="icon-btn ghost" data-close="limitDialog" aria-label="Close">✕</button>
       </div>
 
       <input id="editId" type="hidden" />
+      <fieldset class="type-picker">
+        <legend>Type</legend>
+        <label class="type-option">
+          <input type="radio" name="limitType" value="limit" checked />
+          <span><strong>Limit</strong><small>Locked until its cooldown ends</small></span>
+        </label>
+        <label class="type-option">
+          <input type="radio" name="limitType" value="routine" />
+          <span><strong>Routine</strong><small>Can be logged anytime; the interval shows when it is due</small></span>
+        </label>
+      </fieldset>
       <label>
         <span>Name</span>
         <input id="nameInput" maxlength="40" placeholder="Pizza" required />
@@ -70,7 +81,7 @@
           <input id="emojiInput" maxlength="4" value="🍕" inputmode="text" />
         </label>
         <label>
-          <span>Cooldown</span>
+          <span id="intervalLabel">Cooldown</span>
           <div class="duration-input">
             <input id="cooldownInput" type="number" min="1" max="9999" value="14" required />
             <select id="unitInput" aria-label="Cooldown unit">
@@ -82,7 +93,7 @@
         </label>
       </div>
       <label>
-        <span>Optional note</span>
+        <span id="noteLabel">Optional note</span>
         <input id="noteInput" maxlength="80" placeholder="Only at my favorite place" />
       </label>
 
@@ -118,16 +129,18 @@
       </div>
       <div id="detailStatus" class="detail-status"></div>
       <div class="detail-grid">
-        <div><span>Cooldown</span><strong id="detailCooldown">—</strong></div>
-        <div><span>Last used</span><strong id="detailLast">—</strong></div>
-        <div><span>Next allowed</span><strong id="detailNext">—</strong></div>
-        <div><span>Total uses</span><strong id="detailUses">0</strong></div>
+        <div><span id="detailIntervalLabel">Cooldown</span><strong id="detailCooldown">—</strong></div>
+        <div><span id="detailLastLabel">Last used</span><strong id="detailLast">—</strong></div>
+        <div><span id="detailNextLabel">Next allowed</span><strong id="detailNext">—</strong></div>
+        <div><span id="detailUsesLabel">Total uses</span><strong id="detailUses">0</strong></div>
       </div>
-      <div id="detailNoteWrap" class="note-box hidden"><strong>Note</strong><div id="detailNote"></div></div>
+      <div id="detailEncouragement" class="routine-encouragement hidden"></div>
+      <div id="detailNoteWrap" class="note-box hidden"><strong id="detailNoteLabel">Note</strong><div id="detailNote"></div></div>
       <div class="history-head"><h3>History</h3><button id="undoBtn" class="text-btn hidden">Undo last</button></div>
       <div id="historyList" class="history-list"></div>
       <div class="dialog-actions">
         <button id="editFromDetailBtn" class="secondary-btn">Edit</button>
+        <button id="logFromDetailBtn" class="primary-btn hidden">Log now</button>
         <span class="spacer"></span>
         <button type="button" class="primary-btn" data-close="detailDialog">Done</button>
       </div>
@@ -143,8 +156,8 @@
         </div>
         <button type="button" class="icon-btn ghost" data-close="adminDialog" aria-label="Close">✕</button>
       </div>
-      <button id="adminAddBtn" class="menu-row"><span class="menu-icon">＋</span><span><strong>Add a limit</strong><small>Create another cooldown tile</small></span><span>›</span></button>
-      <button id="exportBtn" class="menu-row"><span class="menu-icon">⇩</span><span><strong>Export backup</strong><small>Download all limits and history as JSON</small></span><span>›</span></button>
+      <button id="adminAddBtn" class="menu-row"><span class="menu-icon">＋</span><span><strong>Add a tile</strong><small>Create a limit or routine</small></span><span>›</span></button>
+      <button id="exportBtn" class="menu-row"><span class="menu-icon">⇩</span><span><strong>Export backup</strong><small>Download all tiles and history as JSON</small></span><span>›</span></button>
       <button id="importBtn" class="menu-row"><span class="menu-icon">⇧</span><span><strong>Import backup</strong><small>Restore a previously exported JSON file</small></span><span>›</span></button>
       <input id="importFile" type="file" accept="application/json,.json" hidden />
       <button id="resetBtn" class="menu-row danger-row"><span class="menu-icon">↺</span><span><strong>Reset app</strong><small>Delete all local data</small></span><span>›</span></button>
